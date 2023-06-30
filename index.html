@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fatalities by State</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <script>
+        // Define the data
+        var state_fatalities = {
+            'State': ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'D.C.', 'Delaware', 'District Of Columbia', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'IA', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virgin Islands', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'],
+            'Fatalities': [18, 4, 15, 22, 102, 39, 57, 2, 2, 2, 3, 48, 15, 0, 1, 0, 21, 6, 16, 2, 23, 15, 0, 3, 13, 25, 26, 12, 16, 2, 3, 8, 0, 1, 6, 12, 19, 18, 3, 23, 33, 1, 12, 0, 29, 67, 3, 4, 1, 79, 32, 5, 8, 2]
+        };
+
+        // Create the map
+        var map = L.map('map').setView([37.0902, -95.7129], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Load GeoJSON data
+        $.getJSON('https://raw.githubusercontent.com/python-visualization/folium/master/examples/data/us-states.json', function (data) {
+            L.geoJSON(data, {
+                style: function (feature) {
+                    return {
+                        color: '#555',
+                        fillColor: getColor(feature.properties.name),
+                        weight: 1,
+                        fillOpacity: 0.8
+                    };
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.on({
+                        mouseover: highlightFeature,
+                        mouseout: resetHighlight
+                    });
+                    layer.bindTooltip(getFeatureLabel(feature.properties.name), { sticky: true });
+                }
+            }).addTo(map);
+        });
+
+        // Get color based on fatalities count
+        function getColor(state) {
+            var fatalities = state_fatalities['Fatalities'][state_fatalities['State'].indexOf(state)];
+            return fatalities > 50 ? '#800026' :
+                fatalities > 30 ? '#BD0026' :
+                    fatalities > 20 ? '#E31A1C' :
+                        fatalities > 10 ? '#FC4E2A' :
+                            fatalities > 0 ? '#FD8D3C' :
+                                '#FFEDA0';
+        }
+
+        // Get label for the feature tooltip
+        function getFeatureLabel(state) {
+            var fatalities = state_fatalities['Fatalities'][state_fatalities['State'].indexOf(state)];
+            return state + ': ' + fatalities + ' fatalities';
+        }
+
+        // Highlight feature on mouseover
+        function highlightFeature(e) {
+            var layer = e.target;
+            layer.setStyle({
+                weight: 2,
+                color: '#666',
+                fillOpacity: 1
+            });
+
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
+
+            // Show fatalities count using Plotly
+            var state = layer.feature.properties.name;
+            var fatalities = state_fatalities['Fatalities'][state_fatalities['State'].indexOf(state)];
+
+            var data = [{
+                x: [state],
+                y: [fatalities],
+                type: 'bar',
+                marker: {
+                    color: getColor(state),
+                    opacity: 0.8
+                }
+            }];
+
+            var layout = {
+                title: 'Fatalities in ' + state,
+                yaxis: {
+                    title: 'Fatalities'
+                }
+            };
+
+            Plotly.newPlot('plotlyDiv', data, layout);
+        }
+
+        // Reset highlight on mouseout
+        function resetHighlight(e) {
+            var layer = e.target;
+            layer.setStyle({
+                weight: 1,
+                color: '#555',
+                fillOpacity: 0.8
+            });
+
+            // Remove Plotly chart
+            Plotly.purge('plotlyDiv');
+        }
+    </script>
+</body>
+</html>
